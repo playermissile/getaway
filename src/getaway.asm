@@ -1,14 +1,3 @@
-; Compiles to nearly exact copy of "M25 - Getaway 1.1.atr" and 100% identical binary to a
-; pirated executable version (probably based on that same disk image) that circulated in the
-; early 80's. None of the sources in the Kevin Savetz release of January 22, 2017 would build
-; precisely to this state, so this is a mix between disk images M11 and M14 from that release
-; with some changes based on the binaries.
-
-; The code in this version is set to start at address $1000, to fit in a 32K machine. Since
-; that would overwrite DOS, and the goal of the original cracker was to create a version that
-; would load under DOS, it's set to load higher in memory then get copied to the correct location
-; once loading is done. See ENTRYPOINT at the end of this source file.
-
 ;       .TITLE 'GETAWAY.ASM  Ver 1.0'
 ;       .SUBTTL 'Mark Reid  Aug 82'
 ; GETAWAY.ASM  Version 1.0
@@ -18,12 +7,23 @@
 ;
 ; Other equates
 ;
-PLYFLD =   $3000      ;playfield addr (size: $4000)
+PLYFLD =   $4000      ;playfield addr (size: $4000)
 SCRNLF =   45         ;screen borders
 SCRNRT =   203
 SCRNTP =   16
 SCRNBT =   103
 ROADS  =   ~01110000  ;bit mask
+
+; Hideout and safe deposit box locations
+
+HIDEOUT_HPOS = 188
+HIDEOUT_VPOS = 48
+SAFE_HPOS = 191
+SAFE_VPOS = 48
+
+HIDEOUT_OFFSET = HIDEOUT_VPOS*$100+HIDEOUT_HPOS
+SAFE_OFFSET = SAFE_VPOS*$100+SAFE_HPOS
+
 ;
 ; Page zero variables
 ;
@@ -36,7 +36,7 @@ BKCOLR .DS 1
 ;
 ; Other variables (and P/M workspace)
 ;
-       *=  $7000
+       *=  $BC00
 PMRAM  =   *
 LEVEL  .DS 1
 GAS    .DS 1
@@ -52,6 +52,7 @@ NPRIZ  .DS 1
 SKILL  .DS 1
 PATHS  .DS 1
 SDELAY .DS 1
+; Parameters for 5 cars: Player, red cop, green cop, purple cop, white van
 DIR    .DS 5
 HPOSF  .DS 5
 HPOS   .DS 5
@@ -78,37 +79,11 @@ SIRFR3 .DS 1
 ;
 ; Beginning of Program Area
 ;
-       .bank
-       *=  $F80
-       .SET 6, $1B00 ; Load in $2a80 (code is moved later)
-
-START_DATA_SRC = *+$1B00
-START_DATA_DST
-       ; data present in first sector of boot disk, and also found in pirated binary.
-	   .word $c100, START_DATA_DST, STEAL
-START_DATA_INIT
-	   clc
-	   rts
-	   ; padding
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   .byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	   ; padding should bring us to $1000
-	   .if * <> $1000
-	   .error "Bad padding!"
-	   .endif
-	   
+       *=  $8000
 ;
 ; Use file GETAWAY.DAT, which contains
-
 ;  definitions of character sets, P/M
 ;  shapes, animation sets, title data,
-
 ;  messages, scorelines, and sound
 ;  tables.
 ;
@@ -258,7 +233,6 @@ ORMSK  .BYTE  0,16,32,64,128
 ANDMSK .BYTE  0,239,223,191,127
 ;
 ;   Direction table for COPMOV routine
-
 ;
 DIRTAB .BYTE  8,2,1,4
        .BYTE  8,1,2,4
@@ -269,13 +243,13 @@ DIRTAB .BYTE  8,2,1,4
        .BYTE  1,8,4,2
        .BYTE  1,4,8,2
 ;
-;   Initial variable value table
-;
+;   Initial variable value table (copied to DIR thru VPOS at game start)
+;   for: Player, red cop, green cop, purple cop, white van
 INITAB .BYTE  0,0,0,0,0  ;DIR
        .BYTE  0,0,0,0,0  ;HPOSF
-       .BYTE  184,170,198,182,194;HPOS
+       .BYTE  HIDEOUT_HPOS-4,170,198,182,194;HPOS
        .BYTE  0,0,0,0,0  ;VPOSF
-       .BYTE  +>PLYFLD, 48,51,50,46,45;VPOS
+       .BYTE  +>PLYFLD, HIDEOUT_VPOS,51,50,46,45;VPOS
        ; note: the "+>PLYFLD" means add the value of the high byte of PLYFLD to each byte.
 ;
 ; Subroutine CLEAR clears P/M RAM,
@@ -328,14 +302,14 @@ CLR040 LDA STASLN-1,X
        STA BOTLMS
        LDA #>BOTLIN
        STA BOTLMS+1 
-       LDA #118       ;reset hideout
-       STA PLYFLD+12476
+       LDA #118       ;reset hideout and safe
+       STA PLYFLD+HIDEOUT_OFFSET
        LDA #119
-       STA PLYFLD+12477
+       STA PLYFLD+HIDEOUT_OFFSET+1
        LDA #33
-       STA PLYFLD+12479
+       STA PLYFLD+SAFE_OFFSET
        LDA #34
-       STA PLYFLD+12480
+       STA PLYFLD+SAFE_OFFSET+1
        RTS
 ;
 ; Subroutine PATHFInd
@@ -450,13 +424,12 @@ MOV999 RTS
 
 ;
 RNSPOT LDA RANDOM     ;pick spot
-       AND #~00111111
-       ORA #~01000000
-       SEC
-       SBC #$10
+       AND #~00111111 ; hi offset $00-3F
+       CLC
+       ADC #>PLYFLD   ; add base of map address
        STA TEMP+1
        LDA RANDOM
-       AND #~11111110
+       AND #~11111110 ; even values only
        STA TEMP       ;TEMP=addr
        CMP #226
        BCS RNS100
@@ -1655,13 +1628,13 @@ HIT010 LDA HPOS       ;look under car
        LDA #255
        STA SAFETY
        LDA #118
-       STA PLYFLD+12476
+       STA PLYFLD+HIDEOUT_OFFSET
        LDA #119
-       STA PLYFLD+12477
+       STA PLYFLD+HIDEOUT_OFFSET+1
        LDA #33
-       STA PLYFLD+12479
+       STA PLYFLD+SAFE_OFFSET
        LDA #34
-       STA PLYFLD+12480
+       STA PLYFLD+SAFE_OFFSET+1
 HIT015 JMP HIT999
 ;
 HITGAS CMP #116       ;gas station?
@@ -1717,7 +1690,6 @@ HITHID CMP #118       ;hideout?
        JMP HITPRZ
 ;
 ; Decrement SAFETY and animate hideout
-
 ;
 HIT200 LDA RTCLOK+2
        AND #7
@@ -1731,17 +1703,17 @@ HIT200 LDA RTCLOK+2
        AND #1
        BEQ SAF100
        LDA #33
-       STA PLYFLD+12479
+       STA PLYFLD+SAFE_OFFSET
        LDA #34
-       STA PLYFLD+12480
+       STA PLYFLD+SAFE_OFFSET+1
        JMP SAF999
 SAF100 LDA #0
-       STA PLYFLD+12479
-       STA PLYFLD+12480
+       STA PLYFLD+SAFE_OFFSET
+       STA PLYFLD+SAFE_OFFSET+1
        JMP SAF999
 SAF900 LDA #112
-       STA PLYFLD+12476
-       STA PLYFLD+12477
+       STA PLYFLD+HIDEOUT_OFFSET
+       STA PLYFLD+HIDEOUT_OFFSET+1
 SAF999 NOP
        LDX #4         ;if no cash,done
 
@@ -2041,9 +2013,9 @@ CAU100 LDA LEVEL      ;reset skill
        STA HPOSF
        STA VPOSF
        STA DIR
-       LDA #184
+       LDA #HIDEOUT_HPOS-4
        STA HPOS
-       LDA #>PLYFLD + 48
+       LDA #>PLYFLD + HIDEOUT_VPOS
        STA VPOS
        LDA #161       ;play tune
        STA SOUND
@@ -2089,13 +2061,13 @@ CAU900 LDA #0
        LDA #255
        STA SAFETY
        LDA #118
-       STA PLYFLD+12476
+       STA PLYFLD+HIDEOUT_OFFSET
        LDA #119
-       STA PLYFLD+12477
+       STA PLYFLD+HIDEOUT_OFFSET+1
        LDA #33
-       STA PLYFLD+12479
+       STA PLYFLD+SAFE_OFFSET
        LDA #34
-       STA PLYFLD+12480
+       STA PLYFLD+SAFE_OFFSET+1
        LDY #20        ;reset gas/cash
 CAU950 LDA CASHLN-1,Y
        STA BOTLIN-1,Y
@@ -2212,48 +2184,10 @@ END700 JMP ENLOOP
 ; End of Program
 ;
 
-	; garbage data to fill space until playfield data
-	.word $02e0, $02e1, STEAL
-	.byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	.byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	.byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	.byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	.byte $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e, $0e
-	.byte $0e, $0e, $0e, $0e, $0e
-
 	; Import playfield data. Note that the file is not expected to contain binary headers.
-	.if * <> PLYFLD
-	.error "Bad padding!"
-	.endif
-	.INCBIN playfield.dat
+	*=  PLYFLD
+	.INCBIN ..\playfield\getaway.plf
 
-ENDOFDATA
-
-; this code disassembled from end of pirate version. Runs without relocation, so disable "set6".
-	*=  *+$1B00
-	.SET 6, 0
-ENTRYPOINT
-	LDY #$00
-	LDX #>(ENDOFDATA-START_DATA_DST)+1 ; size of data to copy. +1 is just a lazy method to round up
-COPYLOOP
-MD1	LDA START_DATA_SRC,Y
-MD2	STA START_DATA_DST,Y
-	INY
-	BNE COPYLOOP
-	INC MD1+2
-	INC MD2+2
-	DEX
-	BNE COPYLOOP
-	LDA #$00
-	STA CASINI
-	STA DOSINI
-	LDA #$00
-	STA CASINI+1
-	STA DOSINI+1
-	JSR START_DATA_INIT
-	JSR STEAL
-	JMP (DOSVEC)
-	
-	.BANK
+	; Set start of program execution.
 	*= $2E0
-	.WORD ENTRYPOINT
+	.WORD STEAL
