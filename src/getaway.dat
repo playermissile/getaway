@@ -340,28 +340,18 @@ PRIZES
 ; Title data
 ;
 TITLE
- .BYTE $00,$3E,$7F,$7F,$1C
- .BYTE $63,$1C,$63,$1C,$00
- .BYTE $00,$60,$60,$1C,$36
- .BYTE $63,$36,$63,$1C,$00
- .BYTE $00,$60,$60,$1C,$63
- .BYTE $63,$63,$63,$1C,$00
- .BYTE $00,$67,$7F,$1C,$7F
- .BYTE $63,$7F,$63,$1C,$00
- .BYTE $00,$63,$60,$1C,$63
- .BYTE $6B,$63,$36,$1C,$00
- .BYTE $00,$63,$60,$1C,$63
- .BYTE $7F,$63,$1C,$1C,$00
- .BYTE $00,$63,$60,$1C,$63
- .BYTE $77,$63,$1C,$00,$00
- .BYTE $00,$3E,$7F,$1C,$63
- .BYTE $63,$63,$1C,$1C,$00
- .BYTE 0,0,0,0,0,0,0,0,0,0,0,0,0,0
- .BYTE "by",0,"-ark",0,"2eid"
- .BYTE 0,0,0,0,0,0,0,0,0,0,0,0,0,0
- .BYTE 0,0,0,0,0,0,0,0,0,0,0,0,0
- .BYTE "#/092)'(4",0,17,25,24,18,0
- .BYTE 0,0,0,0,0,0,0,0,0,0,0,0
+; 
+; 80x8 monochrome bitmap of title graphic
+ .BYTE $00,$3E,$7F,$7F,$1C,$63,$1C,$63,$1C,$00
+ .BYTE $00,$60,$60,$1C,$36,$63,$36,$63,$1C,$00
+ .BYTE $00,$60,$60,$1C,$63,$63,$63,$63,$1C,$00
+ .BYTE $00,$67,$7F,$1C,$7F,$63,$7F,$63,$1C,$00
+ .BYTE $00,$63,$60,$1C,$63,$6B,$63,$36,$1C,$00
+ .BYTE $00,$63,$60,$1C,$63,$7F,$63,$1C,$1C,$00
+ .BYTE $00,$63,$60,$1C,$63,$77,$63,$1C,$00,$00
+ .BYTE $00,$3E,$7F,$1C,$63,$63,$63,$1C,$1C,$00
+ .SBYTE "              by Mark Reid              "
+ .SBYTE "             COPYRIGHT 1982             "
 BLKLIN
  .BYTE $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
  .BYTE $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
@@ -371,9 +361,9 @@ BLKLIN
 ;
 ; Message and scoreline data
 ;
-MSGSTA .BYTE "press",0,'s+128,'t+128
-       .BYTE 'a+128,'r+128,'t+128
-       .BYTE 0,"to",0,"play",0
+MSGSTA .SBYTE "press "
+       .SBYTE +$80, "start"
+       .SBYTE " to play "
 TOPLIN .BYTE 192,192,200,200,0,"stash"
        .BYTE 224,251,16,16,16,16,16,16
        .BYTE 0,186
