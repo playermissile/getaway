@@ -2183,7 +2183,7 @@ END700 JMP ENLOOP
 
 	; Import playfield data. Note that the file is not expected to contain binary headers.
 	*=  PLYFLD
-	.INCBIN ..\playfield\getaway.plf
+	.INCBIN playfield.dat
 
 	; Set start of program execution.
 	*= $2E0
