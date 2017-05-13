@@ -318,7 +318,6 @@ CLR040 LDA STASLN-1,X
 PATHFI LDA OLDPTH,X
        STA PATHS
        LDA VPOSF,X    ;if not at notch
-
        BNE PTH999     ; then done
        LDA HPOSF,X
        BNE PTH999
@@ -326,8 +325,8 @@ PATHFI LDA OLDPTH,X
        STA PATHS
        LDA HPOS,X     ;get POSition
        STA TEMP
-       INC TEMP
-       INC TEMP
+       INC TEMP       ;Each 'block' is 2 bytes wide. Address of block under a car is
+       INC TEMP       ;position+4. Add 2 instead to get location of one block to left.
        LDA VPOS,X
        STA TEMP+1
 CHECKR LDY #4         ;if road right,
@@ -336,7 +335,6 @@ CHECKR LDY #4         ;if road right,
        CMP #ROADS
        BNE CHECKL
        LDA #8         ; set right PATH
-
        ORA PATHS
        STA PATHS
 CHECKL LDY #0         ;if road left,
@@ -421,7 +419,6 @@ MOV030 LDA DIR,X      ;if DIR=up,
 MOV999 RTS
 ;
 ; Subroutine to check random road spot
-
 ;
 RNSPOT LDA RANDOM     ;pick spot
        AND #~00111111 ; hi offset $00-3F
@@ -894,7 +891,6 @@ CARMOV LDX #0
        JMP CAR999
 CAR005 JSR PATHFI
        LDA HPOSF      ;if not at notch
-
        BEQ CAR006     ; mask sideways
        LDA #12       ; out of PATHS
        STA PATHS
@@ -959,7 +955,6 @@ COP005 ASL VTEMP
        LDA #0         ;HTEMP=HPOS*4+7
        STA HTEMP+1    ;      -HPOSF
        LDA HPOS       ; (color clocks)
-
        STA HTEMP
        ASL HTEMP
        ROL HTEMP+1
@@ -971,10 +966,9 @@ COP005 ASL VTEMP
        SEC
        SBC HPOSF
        STA HTEMP
-       LDX #4         ;Start with Van
-COP020 JSR PATHFI
+       LDX #4         ;X is car number. Start with Van, loop downwards thru 1.
+COP020 JSR PATHFI     ; Set bitmask of possible move directions in PATHS
        LDA HPOSF,X    ;if not at notch
-
        ORA VPOSF,X    ; don't change
        BEQ COP023     ; DIRection
        JMP COP505
@@ -989,11 +983,11 @@ COP025 LDA DIR,X
        EOR #12
 COP030 EOR #$FF
        AND PATHS
+       BEQ COP031     ;If masking backwards would leave no path (dead end), skip
        STA PATHS
-       CPX #4         ;Van is dumb
+COP031 CPX #4         ;Van is dumb
        BCS DUMB
        LDA RANDOM     ;if SKILL>RANDOM
-
        CMP SKILL      ; COPs smart
        BCC SMART
 DUMB   LDA RANDOM     ;Y=3*RND(0)
@@ -1006,14 +1000,12 @@ COP040 ROL A
        DEY
        BNE COP040
        BIT PATHS      ;if not in PATHS
-
        BEQ DUMB       ; try again
        JMP COP500
 SMART  LDY #3         ;Find COP pos.
 COP050 LDA HDELTA,X   ; relative to
        SEC            ; CAR and get
        SBC VDELTA,X   ; DIR from table
-
        BCC COP090     ; (Y=priority)
        LDA HSIGN,X
        BNE COP070
@@ -1025,7 +1017,6 @@ COP060 LDA DIRTAB+4,Y ;H>=V,H>=0,V<0
        JMP COP200
 COP070 LDA VSIGN,X
        BNE COP080
-
        LDA DIRTAB+8,Y ;H>=V,H<0,V>=0
        JMP COP200
 COP080 LDA DIRTAB+12,Y;H>=V,H<0,V<0
