@@ -204,23 +204,27 @@ CHSET2
 ; Player/Missile Shape Data
 ;
 PMDATA
- .BYTE $0C,$0F,$1F,$2C,$4C,$4F,$7F,$0C
- .BYTE $30,$FE,$F2,$32,$34,$F8,$F0,$30
- .BYTE $00,$0E,$12,$22,$FF,$FF,$66,$66
- .BYTE $00,$70,$48,$44,$FF,$FF,$66,$66
- .BYTE $0C,$0F,$1F,$2C,$4C,$CF,$7F,$0C
+ .BYTE $0C,$0F,$1F,$2C,$4C,$4F,$7F,$0C ; player: up
+ .BYTE $30,$FE,$F2,$32,$34,$F8,$F0,$30 ;  down
+ .BYTE $00,$0E,$12,$22,$FF,$FF,$66,$66 ;  left
+ .BYTE $00,$70,$48,$44,$FF,$FF,$66,$66 ;  right
+
+ .BYTE $0C,$0F,$1F,$2C,$4C,$CF,$7F,$0C ; cop #1
  .BYTE $30,$FE,$F3,$32,$34,$F8,$F0,$30
  .BYTE $04,$0E,$12,$22,$FF,$FF,$66,$66
  .BYTE $20,$70,$48,$44,$FF,$FF,$66,$66
- .BYTE $0C,$0F,$1F,$2C,$4C,$CF,$7F,$0C
+
+ .BYTE $0C,$0F,$1F,$2C,$4C,$CF,$7F,$0C ; cop #2
  .BYTE $30,$FE,$F3,$32,$34,$F8,$F0,$30
  .BYTE $04,$0E,$12,$22,$FF,$FF,$66,$66
  .BYTE $20,$70,$48,$44,$FF,$FF,$66,$66
- .BYTE $1C,$3F,$5F,$DC,$7C,$7F,$7F,$7C
+
+ .BYTE $1C,$3F,$5F,$DC,$7C,$7F,$7F,$7C ; cop van
  .BYTE $3E,$FE,$FE,$3E,$3B,$FA,$FC,$38
  .BYTE $10,$3F,$4F,$FF,$FF,$FF,$66,$66
  .BYTE $08,$FC,$F2,$FF,$FF,$FF,$66,$66
- .BYTE $0E,$1F,$2F,$2E,$3E,$3F,$3F,$3E
+
+ .BYTE $0E,$1F,$2F,$2E,$3E,$3F,$3F,$3E ; money van
  .BYTE $7C,$FC,$FC,$7C,$74,$F4,$F8,$70
  .BYTE $00,$00,$3F,$4F,$FF,$FF,$FF,$66
  .BYTE $00,$00,$FC,$F2,$FF,$FF,$FF,$66
