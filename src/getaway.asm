@@ -598,6 +598,10 @@ SND999 RTS
 ;
 ; Initialize Program
 ;
+PROGINIT
+       JSR STEAL
+       JMP (DOSVEC)
+
 STEAL  LDA #<RESET ;steal reset
        STA DOSVEC
        LDA #>RESET
@@ -2187,4 +2191,4 @@ END700 JMP ENLOOP
 
 	; Set start of program execution.
 	*= $2E0
-	.WORD STEAL
+	.WORD PROGINIT
