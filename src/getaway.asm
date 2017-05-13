@@ -330,35 +330,27 @@ PATHFI LDA OLDPTH,X
        LDA VPOS,X
        STA TEMP+1
 CHECKR LDY #4         ;if road right,
-       LDA (TEMP),Y
-       AND #ROADS
-       CMP #ROADS
+       JSR CHECKROAD
        BNE CHECKL
        LDA #8         ; set right PATH
        ORA PATHS
        STA PATHS
 CHECKL LDY #0         ;if road left,
-       LDA (TEMP),Y
-       AND #ROADS
-       CMP #ROADS
+       JSR CHECKROAD
        BNE CHECKD
        LDA #4         ; set left PATH
        ORA PATHS
        STA PATHS
 CHECKD LDY #2         ;if road down,
        INC TEMP+1
-       LDA (TEMP),Y
-       AND #ROADS
-       CMP #ROADS
+       JSR CHECKROAD
        BNE CHECKU
        LDA #2         ; set down PATH
        ORA PATHS
        STA PATHS
 CHECKU DEC TEMP+1     ;if road up,
        DEC TEMP+1
-       LDA (TEMP),Y
-       AND #ROADS
-       CMP #ROADS
+       JSR CHECKROAD
        BNE PTH999
        LDA #1         ; set up PATH
        ORA PATHS
@@ -366,10 +358,24 @@ CHECKU DEC TEMP+1     ;if road up,
 PTH999 LDA PATHS
        STA OLDPTH,X
        RTS
+
+; Check whether character at (TEMP),Y may be driven through.
+; Returns Z=1 for true, Z=0 false. May not modify X,Y.
+; Should return true for $70 (=ROADS), $74-$7F.
+CHECKROAD
+       LDA (TEMP),Y
+       CMP #ROADS
+       BEQ CHR999     ; equal to $70 - z=1, go
+       BCC CHR999     ; less than $70 - z=0, go
+       CMP #$74
+       BCC CHR999     ; less than $74 (so must be $71-$73) - z=0, go
+       AND #ROADS     ; if (val AND $70) = $70 then we know it's within $74-$7F
+       CMP #ROADS     ; z=1 if true, 0 otherwise, go
+CHR999 RTS
+	   
 ;
 ; Subroutine MOVE
 ;  changes POSition based on DIRection
-
 ;
 MOVE   LDA DIR,X      ;if DIR=right,
        AND #8
@@ -418,7 +424,7 @@ MOV030 LDA DIR,X      ;if DIR=up,
        DEC VPOS,X
 MOV999 RTS
 ;
-; Subroutine to check random road spot
+; Subroutine to find a random road spot
 ;
 RNSPOT LDA RANDOM     ;pick spot
        AND #~00111111 ; hi offset $00-3F
