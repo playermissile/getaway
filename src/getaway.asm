@@ -76,6 +76,25 @@ SIREN2 .DS 1
 SIRFR2 .DS 1
 SIREN3 .DS 1
 SIRFR3 .DS 1
+
+;
+; Metadata and reference addresses for Omnivore map editor
+;
+; It's okay if this data gets overwritten by the game once it's loaded.
+; Omnivore uses it when loading the disk image but the game itself doesn't
+; look at this data.
+;
+       *= $3982             ; $2000 + $1982 (the year of Getaway!s release)
+
+       .byte "g!pd"         ; magic value
+       .byte $01            ; metadata version
+       .byte $04            ; number of words in list below:
+       .word PLYFLD         ;  playfield location, always $4000 bytes of data
+       .word CHSET1         ;  playfield character set, always $400 bytes
+       .word CHSET2         ;  score line character set, always $200 bytes
+       .word PMDATA         ;  player missile data
+       .byte "Thanks to Mark Reid for placing Getaway! in the public domain."
+
 ;
 ; Beginning of Program Area
 ;
