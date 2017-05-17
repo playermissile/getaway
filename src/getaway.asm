@@ -5,6 +5,10 @@
 ; Use file EQUATES.LIS
        .INCLUDE equates.lis
 ;
+; compilation flags
+;
+DEBUG = 1            ; set to 1 to activate embedded debugging code
+;
 ; Other equates
 ;
 PLYFLD =   $4000      ;playfield addr (size: $4000)
@@ -740,17 +744,18 @@ DMLOOP LDX #0
        ORA VPOSF      ; same DIRection
 
        BNE DEM300
-       LDA DIR
-       AND #3
-       BEQ DEM210
-       EOR #3
+       LDA DIR        ;Disallow backwards except when it's the only choice:
+       AND #~00000011 ; check up and down
+       BEQ DEM210     ; not up or down
+       EOR #~00000011 ; is up or down; only allow opposite
        JMP DEM220
 DEM210 LDA DIR
-       AND #12
-       BEQ DEM220
-       EOR #12
-DEM220 EOR #$FF
-       AND PATHS
+       AND #~00001100 ; check left and right
+       BEQ DEM220     ; not left or right
+       EOR #~00001100 ; is left or right; only allow opposite
+DEM220 EOR #$FF       ; flip to create mask
+       AND PATHS      ; mask out backwards
+       BEQ DEM230     ; if masking backwards leaves no choices, allow it
        STA PATHS
 DEM230 LDA RANDOM     ;rand DIRection
        AND #3
@@ -1001,18 +1006,18 @@ COP020 JSR PATHFI     ; Set bitmask of possible move directions in PATHS
        ORA VPOSF,X    ; don't change
        BEQ COP023     ; DIRection
        JMP COP505
-COP023 LDA DIR,X      ;Mask backwards
-       AND #3
-       BEQ COP025
-       EOR #3
+COP023 LDA DIR,X      ;Disallow backwards except when it's the only choice:
+       AND #~00000011 ; check up and down
+       BEQ COP025     ; not up or down
+       EOR #~00000011 ; is up or down; only allow opposite
        JMP COP030
 COP025 LDA DIR,X
-       AND #12
-       BEQ COP030
-       EOR #12
-COP030 EOR #$FF
-       AND PATHS
-       BEQ COP031     ;If masking backwards would leave no path (dead end), skip
+       AND #~00001100 ; check left and right
+       BEQ COP030     ; not left or right
+       EOR #~00001100 ; is left or right; only allow opposite
+COP030 EOR #$FF       ; flip bits to create mask
+       AND PATHS      ; mask out backwards
+       BEQ COP031     ; if masking backwards leaves no choices, allow it
        STA PATHS
 COP031 CPX #4         ;Van is dumb
        BCS DUMB
@@ -2206,7 +2211,11 @@ END700 JMP ENLOOP
 
 	; Import playfield data. Note that the file is not expected to contain binary headers.
 	*=  PLYFLD
-	.INCBIN playfield.dat
+.if DEBUG
+       .INCBIN debug1.dat
+.else
+       .INCBIN playfield.dat
+.endif
 
 	; Set start of program execution.
 	*= $2E0
