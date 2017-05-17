@@ -18,6 +18,13 @@ SCRNTP =   16
 SCRNBT =   103
 ROADS  =   ~01110000  ;bit mask
 
+; extrema for valid road locations. These define min/max valid road
+; coords. Anything outside the box defined here is outside the boundary
+XROADMIN = 24
+XROADMAX = 228
+YROADMIN = 5
+YROADMAX = 57
+
 ; Hideout and safe deposit box locations
 
 HIDEOUT_HPOS = 188
@@ -57,7 +64,7 @@ SKILL  .DS 1
 PATHS  .DS 1
 SDELAY .DS 1
 ; Parameters for 5 cars: Player, red cop, green cop, purple cop, white van
-DIR    .DS 5
+DIR    .DS 5  ; 1000=right, 0100=left, 0010=down, 0001=up
 HPOSF  .DS 5
 HPOS   .DS 5
 VPOSF  .DS 5
@@ -268,12 +275,21 @@ DIRTAB .BYTE  8,2,1,4
 ;
 ;   Initial variable value table (copied to DIR thru VPOS at game start)
 ;   for: Player, red cop, green cop, purple cop, white van
+.if DEBUG
+; start at some non-road locations (on default map, anyway)
+; note: the "+>PLYFLD" means add the value of the high byte of PLYFLD to each byte.
+INITAB .BYTE  0,0,0,0,0  ;DIR
+       .BYTE  0,0,0,0,0  ;HPOSF
+       .BYTE  HIDEOUT_HPOS-4,182,182,182,182;HPOS
+       .BYTE  0,0,0,0,0  ;VPOSF
+       .BYTE  +>PLYFLD, HIDEOUT_VPOS,52,52,52,52;VPOS
+.else
 INITAB .BYTE  0,0,0,0,0  ;DIR
        .BYTE  0,0,0,0,0  ;HPOSF
        .BYTE  HIDEOUT_HPOS-4,170,198,182,194;HPOS
        .BYTE  0,0,0,0,0  ;VPOSF
        .BYTE  +>PLYFLD, HIDEOUT_VPOS,51,50,46,45;VPOS
-       ; note: the "+>PLYFLD" means add the value of the high byte of PLYFLD to each byte.
+.endif
 ;
 ; Subroutine CLEAR clears P/M RAM,
 ;  variables, and roads
@@ -471,6 +487,91 @@ RNSPOT LDA RANDOM     ;pick spot
        JMP RNS999
 RNS100 CLC            ;its not road
 RNS999 RTS
+;
+; Subroutine to find road near the location in (TEMP) by picking a
+; random direction and marching along until it hits a road (and exit)
+; or the border (and try again in a new direction)
+
+xneardir .byte -2, 0, 2, 0
+yneardir .byte 0, -1, 0, 1
+
+roadnear
+       lda TEMP
+       sta VTEMP
+       lda TEMP+1
+       sta VTEMP+1
+roadnewdir
+       lda RANDOM
+       and #3
+       tay
+       lda xneardir, y
+       sta roadxadd+1
+       lda yneardir, y
+       sta roadyadd+1
+       ldy #4               ; addr of block under car is HPOS+4
+
+roadloopinit
+       lda VTEMP
+       sta TEMP
+       lda VTEMP+1
+       sta TEMP+1
+       jmp roadcheck        ; check the degenerate case where already on road
+
+roadloop
+       clc
+       lda TEMP
+roadxadd
+       adc #2
+       sta TEMP
+       cmp #XROADMIN
+       bcc roadnewdir       ; new direction if left edge
+       cmp #XROADMAX
+       beq ?1               ; continue if equal
+       bcs roadnewdir       ; new direction if greater than
+
+?1     clc
+       lda TEMP+1
+roadyadd
+       adc #1
+       sta TEMP+1
+       cmp #>PLYFLD + YROADMIN
+       bcc roadnewdir       ; new direction if left edge
+       cmp #>PLYFLD + YROADMAX
+       beq roadcheck        ; continue if equal
+       bcs roadnewdir       ; new direction if greater than
+
+roadcheck
+       JSR CHECKROAD        ; found tile within the border
+
+.if DEBUG
+;  this marks the search path on screen to show the blocked checked
+       beq roadfound
+       txa
+       sta (TEMP),y
+       jmp roadloop
+.else
+       bne roadloop
+.endif
+
+roadfound
+       rts
+;
+; Set initial position of cops to valid road block near hideout
+;
+initcops
+       ldx #4
+?2     lda HPOS,X
+       sta TEMP
+       lda VPOS,X
+       sta TEMP+1
+       jsr roadnear
+       lda TEMP
+       sta HPOS,X
+       lda TEMP+1
+       sta VPOS,X
+       dex
+       bne ?2
+       rts
 ;
 ; Subroutine to increase cash & skill
 ;
@@ -910,6 +1011,7 @@ STA040 JSR RNSPOT     ;get spot
        STA (TEMP),Y
        DEX
        BNE STA040
+       jsr initcops
 ;
 ; Main Loop of Program
 ;
