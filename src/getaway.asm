@@ -7,7 +7,7 @@
 ;
 ; compilation flags
 ;
-DEBUG = 1            ; set to 1 to activate embedded debugging code
+DEBUG = 2            ; nonzero includes debugging code & sets debug map
 ;
 ; Other equates
 ;
@@ -2394,7 +2394,11 @@ END700 JMP ENLOOP
 	; Import playfield data. Note that the file is not expected to contain binary headers.
 	*=  PLYFLD
 .if DEBUG
-       .INCBIN debug1.dat
+.if DEBUG = 1
+       .INCBIN debug1.dat   ; small set of roads, lots of dead-ends
+.else
+       .INCBIN debug2.dat   ; normal map except hideout/safe are moved
+.endif
 .else
        .INCBIN playfield.dat
 .endif
