@@ -17,23 +17,16 @@ SCRNRT =   203
 SCRNTP =   16
 SCRNBT =   103
 ROADS  =   ~01110000  ;bit mask
+HIDEOUT_CHAR = 118    ;left hideout char; right is 119
+SAFE_CHAR = 33        ;left safe char; right is 34
 
 ; extrema for valid road locations. These define min/max valid road
 ; coords. Anything outside the box defined here is outside the boundary
+; Note: the right border is 26 chars, so the playfield is not symmetric
 XROADMIN = 24
 XROADMAX = 228
 YROADMIN = 5
 YROADMAX = 57
-
-; Hideout and safe deposit box locations
-
-HIDEOUT_HPOS = 188
-HIDEOUT_VPOS = 48
-SAFE_HPOS = 191
-SAFE_VPOS = 48
-
-HIDEOUT_OFFSET = HIDEOUT_VPOS*$100+HIDEOUT_HPOS
-SAFE_OFFSET = SAFE_VPOS*$100+SAFE_HPOS
 
 ;
 ; Page zero variables
@@ -44,6 +37,8 @@ VTEMP  .DS 2
 HTEMP  .DS 2
 BTCOLR .DS 1
 BKCOLR .DS 1
+hideout_addr .DS 2
+safe_addr .DS 2
 ;
 ; Other variables (and P/M workspace)
 ;
@@ -273,24 +268,6 @@ DIRTAB .BYTE  8,2,1,4
        .BYTE  1,8,4,2
        .BYTE  1,4,8,2
 ;
-;   Initial variable value table (copied to DIR thru VPOS at game start)
-;   for: Player, red cop, green cop, purple cop, white van
-.if DEBUG
-; start at some non-road locations (on default map, anyway)
-; note: the "+>PLYFLD" means add the value of the high byte of PLYFLD to each byte.
-INITAB .BYTE  0,0,0,0,0  ;DIR
-       .BYTE  0,0,0,0,0  ;HPOSF
-       .BYTE  HIDEOUT_HPOS-4,182,182,182,182;HPOS
-       .BYTE  0,0,0,0,0  ;VPOSF
-       .BYTE  +>PLYFLD, HIDEOUT_VPOS,52,52,52,52;VPOS
-.else
-INITAB .BYTE  0,0,0,0,0  ;DIR
-       .BYTE  0,0,0,0,0  ;HPOSF
-       .BYTE  HIDEOUT_HPOS-4,170,198,182,194;HPOS
-       .BYTE  0,0,0,0,0  ;VPOSF
-       .BYTE  +>PLYFLD, HIDEOUT_VPOS,51,50,46,45;VPOS
-.endif
-;
 ; Subroutine CLEAR clears P/M RAM,
 ;  variables, and roads
 ;
@@ -341,14 +318,7 @@ CLR040 LDA STASLN-1,X
        STA BOTLMS
        LDA #>BOTLIN
        STA BOTLMS+1 
-       LDA #118       ;reset hideout and safe
-       STA PLYFLD+HIDEOUT_OFFSET
-       LDA #119
-       STA PLYFLD+HIDEOUT_OFFSET+1
-       LDA #33
-       STA PLYFLD+SAFE_OFFSET
-       LDA #34
-       STA PLYFLD+SAFE_OFFSET+1
+       jsr resethideout
        RTS
 ;
 ; Subroutine PATHFInd
@@ -560,11 +530,21 @@ roadfound
 ;
 initcops
        ldx #4
-?2     lda HPOS,X
+?2     lda RANDOM    ; find random location near hideout (might not be road)
+       and #$1e      ; only even positions for horizontal
+       sec
+       sbc #16
+       clc
+       adc HPOS
        sta TEMP
-       lda VPOS,X
+       lda RANDOM
+       and #$0f      ; vertical positions can be even or odd
+       sec
+       sbc #8
+       clc
+       adc VPOS
        sta TEMP+1
-       jsr roadnear
+       jsr roadnear  ; find road near this random location
        lda TEMP
        sta HPOS,X
        lda TEMP+1
@@ -572,6 +552,82 @@ initcops
        dex
        bne ?2
        rts
+;
+; Find hideout and safe on map
+;
+findfirstany
+       lda #$EA      ; NOP
+       bne findfirst+2
+findfirst
+       lda #$88      ; DEY
+       sta findeven
+       lda #0
+       sta TEMP
+       lda #>PLYFLD+YROADMIN
+       sta TEMP+1
+       ldx #54       ; map is 16k (64 pages) but only 54 pages of usable area
+findvloop
+       ldy #XROADMAX ; only 228 - 24 = 204 usable chars
+findloop
+       lda (TEMP),y
+       cmp VTEMP     ; character of interest
+       beq charfound
+       dey           ; blocks are 2 chars wide
+findeven dey
+       cpy #XROADMIN-1
+       bcs findloop  ; line done?
+       inc TEMP+1
+       dex
+       bne findvloop ; screen done?
+       clc           ; clear carry = not found
+       rts
+charfound
+       sty TEMP      ; save x position
+       sec           ; set carry = found
+       rts
+
+findhideout
+       lda #HIDEOUT_CHAR
+       sta VTEMP
+       jsr findfirst
+       bcs foundhideout
+       jsr RNSPOT    ; use random road location as hideout if not found
+foundhideout
+       lda TEMP
+       sta hideout_addr
+       lda TEMP+1
+       sta hideout_addr+1
+
+       lda #SAFE_CHAR
+       sta VTEMP
+       jsr findfirstany
+       bcs foundsafe
+       lda #0        ; FIXME: choose location close to hideout?
+       sta TEMP
+       lda #>PLYFLD
+       sta TEMP+1
+foundsafe
+       lda TEMP
+       sta safe_addr
+       lda TEMP+1
+       sta safe_addr+1
+       rts
+;
+; reset hideout and safe
+;
+resethideout
+       ldy #0
+       lda #118
+       sta (hideout_addr),y
+       lda #33
+       sta (safe_addr),y
+       iny
+       lda #119
+       sta (hideout_addr),y
+       lda #34
+       sta (safe_addr),y
+       rts
+
 ;
 ; Subroutine to increase cash & skill
 ;
@@ -944,11 +1000,41 @@ DEM400 LDA CONSOL     ;check for START
 ;
 START  JSR CLEAR      ;clear vars & PM
 
+       lda #0         ;clear DIR, HPOS, HPOSF, VPOS, VPOSF
        LDX #25        ;init vars from
-STA010 LDA INITAB-1,X ; value table
-       STA DIR-1,X
+STA010 STA DIR-1,X
        DEX
        BNE STA010
+
+       jsr findhideout ; hideout/safe aren't hardcoded any more
+
+       lda hideout_addr ; set initial position of car
+       sec
+       sbc #4
+       sta HPOS
+       lda hideout_addr+1
+       sta VPOS
+
+       ldx #4           ; set initial pos of cops & van near hideout
+setcoploc
+       lda RANDOM
+       and #$0f
+       sec
+       sbc #8
+       adc HPOS
+       sta HPOS,x
+
+       sta HPOS+1
+       sta HPOS+2
+       sta HPOS+3
+       sta HPOS+4
+       lda hideout_addr+1
+       sta VPOS
+       sta VPOS+1
+       sta VPOS+2
+       sta VPOS+3
+       sta VPOS+4
+
        LDA #PMLEFT+22*4
        STA HSCRN
        LDA #59
@@ -1754,14 +1840,7 @@ HIT010 LDA HPOS       ;look under car
        BEQ HIT015
        LDA #255
        STA SAFETY
-       LDA #118
-       STA PLYFLD+HIDEOUT_OFFSET
-       LDA #119
-       STA PLYFLD+HIDEOUT_OFFSET+1
-       LDA #33
-       STA PLYFLD+SAFE_OFFSET
-       LDA #34
-       STA PLYFLD+SAFE_OFFSET+1
+       jsr resethideout
 HIT015 JMP HIT999
 ;
 HITGAS CMP #116       ;gas station?
@@ -1829,18 +1908,24 @@ HIT200 LDA RTCLOK+2
        BCS SAF999
        AND #1
        BEQ SAF100
+       ldy #0
        LDA #33
-       STA PLYFLD+SAFE_OFFSET
+       sta (safe_addr),y
+       iny
        LDA #34
-       STA PLYFLD+SAFE_OFFSET+1
+       sta (safe_addr),y
        JMP SAF999
 SAF100 LDA #0
-       STA PLYFLD+SAFE_OFFSET
-       STA PLYFLD+SAFE_OFFSET+1
+       ldy #0
+       sta (safe_addr),y
+       iny
+       sta (safe_addr),y
        JMP SAF999
 SAF900 LDA #112
-       STA PLYFLD+HIDEOUT_OFFSET
-       STA PLYFLD+HIDEOUT_OFFSET+1
+       ldy #0
+       sta (hideout_addr),y
+       iny
+       sta (hideout_addr),y
 SAF999 NOP
        LDX #4         ;if no cash,done
 
@@ -2140,9 +2225,11 @@ CAU100 LDA LEVEL      ;reset skill
        STA HPOSF
        STA VPOSF
        STA DIR
-       LDA #HIDEOUT_HPOS-4
+       lda hideout_addr
+       sec
+       sbc #4
        STA HPOS
-       LDA #>PLYFLD + HIDEOUT_VPOS
+       LDA hideout_addr+1
        STA VPOS
        LDA #161       ;play tune
        STA SOUND
@@ -2187,14 +2274,7 @@ CAU900 LDA #0
        STA BKCOLR
        LDA #255
        STA SAFETY
-       LDA #118
-       STA PLYFLD+HIDEOUT_OFFSET
-       LDA #119
-       STA PLYFLD+HIDEOUT_OFFSET+1
-       LDA #33
-       STA PLYFLD+SAFE_OFFSET
-       LDA #34
-       STA PLYFLD+SAFE_OFFSET+1
+       jsr resethideout
        LDY #20        ;reset gas/cash
 CAU950 LDA CASHLN-1,Y
        STA BOTLIN-1,Y
