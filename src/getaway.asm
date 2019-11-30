@@ -123,7 +123,6 @@ TDLIST .BYTE  DLBL8,DLBL8,DLBL8,DLBL8
        .BYTE  DLMAP9+DLLMS
        .WORD  TITLE
        .BYTE  DLMAP9,DLMAP9,DLMAP9,DLMAP9
-
        .BYTE  DLMAP9,DLMAP9,DLMAP9
        .BYTE  DLBL8
        .BYTE  DLCHR2
@@ -271,7 +270,6 @@ DIRTAB .BYTE  8,2,1,4
 ; Subroutine CLEAR clears P/M RAM,
 ;  variables, and roads
 ;
-
 CLEAR  LDA #<PMRAM ;clear PM & vars
        STA TEMP
        LDA #>PMRAM
@@ -436,7 +434,7 @@ MOV999 RTS
 ; Subroutine to find a random road spot
 ;
 RNSPOT LDA RANDOM     ;pick spot
-       AND #~00111111 ; hi offset $00-3F
+       AND #$3F       ; hi offset $00-3F
        CLC
        ADC #>PLYFLD   ; add base of map address
        STA TEMP+1
@@ -668,7 +666,6 @@ ADC130 LDA #16
 ADC999 RTS
 ; Subroutine ANMDOL
 ; animates dollars,stoplights & prizes
-
 ;
 ANMDOL LDA RTCLOK+2   ;dollars
        AND #32
@@ -790,18 +787,15 @@ STEAL  LDA #<RESET ;steal reset
        STA PACTL
        RTS
 RESET  JSR CLEAR      ;clear vars & PM
-
        LDA #$3       ;clear SO.2&3
        STA SKCTL
        STA SSKCTL
        LDA #0
        STA AUDCT
        LDA #1         ;clear boot flag
-
        STA BOOTQ
        LDA RTCLOK+2
 RES010 CMP RTCLOK+2   ;wait for Vblank
-
        BEQ RES010
        LDA #0         ;turn off ANTIC
        STA SDMCTL
@@ -884,7 +878,6 @@ RES010 CMP RTCLOK+2   ;wait for Vblank
 ; Demo Mode
 ;
 DEMO   JSR RNSPOT     ;put car at rand
-
        BCC DEMO
        LDA TEMP+1
        STA VPOS
@@ -895,11 +888,9 @@ DEMO   JSR RNSPOT     ;put car at rand
        LDA #183        ;play tune
        STA SOUND
 DMLOOP LDX #0
-       JSR PATHFI
+       JSR PATHFI     ; Set bitmask of possible move directions in PATHS
        LDA HPOSF      ;if not at notch
-
        ORA VPOSF      ; same DIRection
-
        BNE DEM300
        LDA DIR        ;Disallow backwards except when it's the only choice:
        AND #~00000011 ; check up and down
@@ -928,7 +919,6 @@ DEM240 ROL A
        STA DIR
 DEM300 JSR MOVE
        LDA RTCLOK+2   ;wait for Vblank
-
 DEM310 CMP RTCLOK+2
        BEQ DEM310
        LDA HPOS       ;scroll
@@ -955,7 +945,6 @@ DEM350 LDA TEMP
        LDA HPOSF
        STA HSCROL
        LDA DIR        ;PM shape offset
-
        STA VTEMP
        CLC
        LDA #0
@@ -988,7 +977,6 @@ DEM390 DEY
        LDA #183
        STA SOUND
 DEM400 LDA CONSOL     ;check for START
-
        AND #SWSTRT
        BEQ START
        LDA STRIG0
@@ -999,9 +987,8 @@ DEM400 LDA CONSOL     ;check for START
 ; Initialize Game
 ;
 START  JSR CLEAR      ;clear vars & PM
-
        lda #0         ;clear DIR, HPOS, HPOSF, VPOS, VPOSF
-       LDX #25        ;init vars from
+       LDX #25
 STA010 STA DIR-1,X
        DEX
        BNE STA010
@@ -1055,7 +1042,6 @@ setcoploc
        STA ATRACT
        LDA RTCLOK+2
 STA030 CMP RTCLOK+2   ;wait for Vblank
-
        BEQ STA030
        LDA #0         ;turn off ANTIC
        STA SDMCTL
@@ -1147,7 +1133,6 @@ CAR080 LDA SPEED
        BNE CAR200
        LDA GAS        ;if out of GAS
        BNE CAR100     ;only move every
-
        LDA RTCLOK+2   ;other tic
        AND #1
        BNE CAR999
@@ -1261,9 +1246,7 @@ COP200 BIT PATHS      ;if valid PATH
        TYA            ;if last prior.
        BEQ COP500     ; then done
        DEY            ;decrease prior.
-
        JMP COP050     ;and try again
-
 COP500 STA DIR,X      ;save new DIR
 COP505 JSR MOVE
        LDA SPEED
@@ -1283,7 +1266,6 @@ COP510 ASL TEMP
        ADC TEMP
        STA TEMP
        SEC            ;TEMP=TEMP-VTEMP
-
        LDA TEMP
        SBC VTEMP
        STA TEMP
@@ -1292,10 +1274,8 @@ COP510 ASL TEMP
        STA TEMP+1
        LDA #0         ;if carry set
        STA VSIGN,X    ; then VSIGN=pos
-
        BCS COP520
        LDA #1         ; else VSIGN=neg
-
        STA VSIGN,X
        SEC            ;TEMP=-TEMP
        LDA #0
@@ -1325,7 +1305,6 @@ COP530 LDA #0         ;Calc HDELTA
        SBC HPOSF,X
        STA TEMP
        SEC            ;TEMP=TEMP-HTEMP
-
        LDA TEMP
        SBC HTEMP
        STA TEMP
@@ -1334,10 +1313,8 @@ COP530 LDA #0         ;Calc HDELTA
        STA TEMP+1
        LDA #0         ;if carry set
        STA HSIGN,X    ; then HSIGN=pos
-
        BCS COP540
        LDA #1         ; else HSIGN=neg
-
        STA HSIGN,X
        SEC            ;TEMP=-TEMP
        LDA #0
@@ -1354,9 +1331,7 @@ COP540 LDA TEMP       ;HDELTA=TEMP
        STA HDELTA,X
 ;
 COP550 LDA #0         ;calc screen pos
-
        STA RADAR,X    ; based on DELTA
-
        STA HSCRN,X    ; and SIGN
        LDA HDELTA,X
        CMP #255
@@ -1457,7 +1432,6 @@ SWC010 LDA CH
        EOR #$FF
        STA PAUSE
        LDA #$FF       ;reset keybuffer
-
        STA CH
 SWC020 LDA STICK0
        CMP #15
@@ -1470,11 +1444,9 @@ SWC030 LDA PAUSE
 ; Draw Screen
 ;
 WAITVB LDA RTCLOK+2   ;wait for VBlank
-
 WTLOOP CMP RTCLOK+2
        BEQ WTLOOP
        STA HITCLR     ;clear collision
-
 SCROLL LDA HPOS       ;TEMP=HPOS-19
        SEC
        SBC #19
@@ -1485,7 +1457,6 @@ SCROLL LDA HPOS       ;TEMP=HPOS-19
        TAY
        LDX #8
 SCR010 LDA TEMP       ;loop loads LMSs
-
        STA PDLIST,X
        INX
        TYA
@@ -1528,10 +1499,8 @@ DRA030 TXA            ;RADAR=0, calc
        LDA DIR,X
        BNE DRA035     ;if DIR=0
        LDA OLDDIR,X   ;then DIR=OLDDIR
-
        JMP DRA038
 DRA035 STA OLDDIR,X   ;else OLDDIR=DIR
-
 DRA038 STA VTEMP
        CLC
        LDA TEMP
@@ -1548,7 +1517,6 @@ DRA050 CLC
 DRA100 CLC            ;calc PM RAM
        LDA VSCRN,X    ; offset based
        ADC #<PMRAM ; on X and VSCRN
-
        STA VTEMP
        LDA #1
        ADC #>PMRAM
@@ -1648,7 +1616,6 @@ RBL999 NOP
 SIRENS LDX #3
        LDY #4
 SRN005 LDA HDELTA,X   ;set volume=dist
-
        ASL A
        BCC SRN007
        ROR A
@@ -1781,7 +1748,6 @@ LOW200 STA BTCOLR
        STA CHSET1+35*8+1
 ;
 ; Increment TIME and adjust background
-
 ;  color and SKILL
 ;
 TIMER  LDA RTCLOK+2
@@ -1823,7 +1789,6 @@ TIM999 NOP
 ; Check for road collisions
 ;
 HITANY LDA HPOSF      ;if not at notch
-
        ORA VPOSF      ; done
        BEQ HIT010
        JMP HIT999
@@ -1886,7 +1851,6 @@ HITDOL CMP #126       ;dollar sign?
        INY
        STA (TEMP),Y
        INC NDOLR      ;draw new dollar
-
        LDX #4         ;add to skill
        JSR ADCASH     ; and cash
        JMP HIT999
@@ -1928,7 +1892,6 @@ SAF900 LDA #112
        sta (hideout_addr),y
 SAF999 NOP
        LDX #4         ;if no cash,done
-
 HIT210 LDA BOTLIN+14,X
        CMP #16
        BNE HIT220
@@ -2012,7 +1975,6 @@ HIT410 LDA #49        ;make sound
 HITRBL CMP #122       ;roadblock?
        BNE HITSTP
        LDA #112       ;erase roadblock
-
        STA (TEMP),Y
        INY
        STA (TEMP),Y
@@ -2032,7 +1994,6 @@ HITSTP CMP #124       ;stoplight?
        AND #64
        BEQ HIT999
        LDA #112       ;erase stoplight
-
        STA (TEMP),Y
        INY
        STA (TEMP),Y
@@ -2076,7 +2037,6 @@ HTV030 LDA M0PL       ;van collision
        STA VTEMP
        AND #~00001000
        BNE HTV050     ;if no hit, done
-
        JMP HITCOP
 HTV050 JSR RNSPOT     ;move van
        BCC HTV050
@@ -2104,7 +2064,6 @@ HTV100 LDA #3         ;reset prizes
        LDA #19+128
        STA TOPLIN+19
        INC LEVEL      ;increment level
-
        LDA LEVEL
        CMP #7         ;limit to 6
        BCC HTV120
@@ -2129,7 +2088,6 @@ HTV120 LDA LEVEL       ;level marker
        ADC #25+64
        STA TOPLIN+18
        INC NPRIZ      ;draw new prizes
-
        INC NPRIZ
        INC NPRIZ
        LDX #3         ;add cash/skill
@@ -2234,7 +2192,6 @@ CAU100 LDA LEVEL      ;reset skill
        LDA #161       ;play tune
        STA SOUND
 CALOOP LDA RTCLOK+2   ;wait for Vblank
-
 CAU200 CMP RTCLOK+2
        BEQ CAU200
        LDA RTCLOK+2   ;move lost car
@@ -2302,7 +2259,6 @@ END200 LDA #137       ;play tune
        LDA #0
        STA HTEMP
 ENLOOP LDA RTCLOK+2   ;wait for Vblank
-
 END310 CMP RTCLOK+2
        BEQ END310
        JSR ANMDOL

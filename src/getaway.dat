@@ -410,31 +410,50 @@ MSGRAT .BYTE 0,0,0,0,0,0,"lowlife",143,0
 ;
 ; Sound Tables
 ;
+; A sound is started by placing the index of the desired sound effect into SOUND.
+; The index is incremented before the first read, so set 1 for index 2, etc.
+; There are three parallel tables: AUDC, AUDF, DUR. Each sound effect plays
+; until a zero is seen in AUDC. Then the SOUND is set to zero, which indicates nothing
+; is being played.
+
 AUDC
  .BYTE $00,$00
+; 1 = gas pump ding
  .BYTE $AF,$AC,$AA,$A9,$A8,$A7,$A6,$A5
  .BYTE $A4,$A3,$A2,$A1,$00,$00,$00,$00
+; 17 = dropped cash at hideout
  .BYTE $AF,$AC,$AA,$A9,$A8,$A7,$A6,$A5
  .BYTE $A4,$A3,$A2,$A1,$00,$00,$00,$00
+; 33 = got final prize for this level
  .BYTE $A6,$A6,$A6,$A6,$A6,$A6,$A6,$A6
  .BYTE $A6,$00,$00,$00,$00,$00,$00,$00
+; 49 = any prize/van
  .BYTE $A6,$A0,$A6,$A0,$A6,$A0,$A6,$00
  .BYTE $00,$00,$00,$00,$00,$00,$00,$00
+; 65 = got van, level up
  .BYTE $A6,$A6,$A6,$A6,$A6,$A6,$00,$00
  .BYTE $00,$00,$00,$00,$00,$00,$00,$00
+; 81 = hit stoplight
  .BYTE $C6,$A0,$C6,$00,$00,$00,$00,$00
  .BYTE $00,$00,$00,$00,$00,$00,$00,$00
+; 97 - unused sound
  .BYTE $A6,$A0,$A6,$A0,$A6,$A0,$A6,$A0
  .BYTE $A6,$A0,$A6,$A0,$A6,$A0,$A6,$00
+; 113 = hit roadblock
  .BYTE $48,$26,$A5,$00,$00,$00,$00,$00
  .BYTE $00,$00,$00,$00,$00,$00,$00,$00
+; 129 = dollar sign cha-ching!
  .BYTE $04,$A0,$06,$A4,$A3,$A2,$A1,$00
+; 137 = lost life + game over
  .BYTE $A6,$A6,$A6,$A6,$A6,$A6,$A6,$A6
  .BYTE $A6,$A0,$A6,$A6,$A6,$A6,$A0,$A0
  .BYTE $A0,$A0,$A0,$A0,$A0,$A0,$00,$00
+; 161 = lost life
  .BYTE $A6,$A6,$A6,$A6,$A6,$A6,$A6,$A6
  .BYTE $A6,$A0,$00,$00,$00,$00,$00,$00
- .BYTE $00,$00,$00,$00,$00,$00,$A6,$A6
+ .BYTE $00,$00,$00,$00,$00,$00
+; 183 = title screen tune
+ .BYTE $A6,$A6
  .BYTE $A6,$A0,$A6,$A6,$A6,$A0,$A6,$A6
  .BYTE $A6,$A0,$A6,$A6,$A6,$A0,$A6,$A6
  .BYTE $A6,$A0,$A6,$A6,$A6,$A0,$A6,$A0
